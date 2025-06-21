@@ -6,9 +6,9 @@ const env_vars = require('./config')[env];
 
 const connectToDatabase = async () => {
   mongoose
-    .connect(env_vars.connection_url)
+    .connect(process.env.MONGODB_URL)
     .then(() => {
-      console.log(`MongoDB Connected ${env_vars.connection_url}`);
+      console.log(`MongoDB Connected ${process.env.MONGODB_URL}`);
     })
     .catch((err) => {
       console.log(
