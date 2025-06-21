@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nimap-spaces-backend-${DEPLOY_ENV}
+    container_name: nimap-spaces-backend-${DEPLOY_ENV}
+    restart: always
+    environment:
+      - DB_DEV_URL=${DB_DEV_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - "6013:3000"
+    depends_on:
+      - db
+
+  db:
+    image: mongo:latest
+    container_name: nimap-spaces-mongo-${DEPLOY_ENV}
+    ports:
+      - "6014:27017"
+    restart: always
+    volumes:
+      - nimap-spaces-mongo:/data/db
+
+volumes:
+  nimap-spaces-mongo:
+
+
+
+

@@ -1,0 +1,392 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Multi-Room Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0; padding: 20px;
+            background: #f2f2f2;
+        }
+        #login-container, #chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        #chat-container {
+            display: none;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .chat-box {
+            background: white;
+            width: 350px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-box h3 {
+            margin: 0 0 10px;
+            text-align: center;
+        }
+        .messages {
+            height: 250px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .msg {
+            margin-bottom: 10px;
+        }
+        .chat-form {
+            display: flex;
+        }
+        .chat-form input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-right: none;
+            border-radius: 5px 0 0 5px;
+        }
+        .chat-form button {
+            padding: 10px 15px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div id="login-container">
+    <h2>Enter Your Email ID And Password</h2>
+    <form id="login-form">
+        <input type="text" id="emailInput" placeholder="Email ID" required />
+        <input type="text" id="passwordInput" placeholder="Password" required />
+        <button type="submit">Enter Chat</button>
+    </form>
+</div>
+
+<div id="chat-container"></div>
+
+<script>
+    const socket = io('http://localhost:3000');
+
+    const loginForm = document.getElementById('login-form');
+    const emailInput = document.getElementById('emailInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const chatContainer = document.getElementById('chat-container');
+    const loginContainer = document.getElementById('login-container');
+
+    const chatBoxes = {};
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+        if (!email || !password) return;
+
+        const loginUser = await fetch(`http://localhost:3000/api/auth/googleSign`,{
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        })
+
+        const responseData = await loginUser.json();
+
+        if (!loginUser.ok) {
+            console.error("Login failed:", responseData.message || responseData.error);
+        }
+
+        const userInfoAndToken = responseData.userInfoAndToken;
+        const token = userInfoAndToken.token;
+        const userId = userInfoAndToken.userId;
+        const userName = userInfoAndToken.userName;
+
+        const res = await fetch(`http://localhost:3000/api/conversation?userId=${userId}`);
+        let conversations = await res.json();
+        conversations = conversations.result;
+
+        loginContainer.style.display = 'none';
+        chatContainer.style.display = 'flex';
+
+        for (const conversation of conversations) {
+            const conversationId = conversation._id;
+
+            // Fetch previous messages
+            const res = await fetch(`http://localhost:3003/api/conversation/messages/${conversationId}`);
+            let previousMessages = await res.json();
+            previousMessages = previousMessages.result;
+
+            // Join the room
+            socket.emit('join', { conversationId, userName });
+
+            // Create chat box
+            const box = document.createElement('div');
+            box.className = 'chat-box';
+            box.innerHTML = `
+                <h3>Conversation: ${conversationId}</h3>
+                <div class="messages" id="messages-${conversationId}"></div>
+                <form class="chat-form" data-id="${conversationId}">
+                    <input type="text" placeholder="Type a message..." required />
+                    <button type="submit">Send</button>
+                </form>
+            `;
+            chatContainer.appendChild(box);
+            chatBoxes[conversationId] = box;
+
+            // Append previous messages
+            const messageDiv = document.getElementById(`messages-${conversationId}`);
+            previousMessages.forEach(msg => {
+                const msgEl = document.createElement('div');
+                msgEl.className = 'msg';
+                msgEl.textContent = `${msg.createdBy.firstName === userName ? "You": msg.createdBy.firstName}: ${msg.content}`;
+                messageDiv.appendChild(msgEl);
+            });
+            messageDiv.scrollTop = messageDiv.scrollHeight;
+        }
+
+
+        chatContainer.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const conversationId = form.dataset.id;
+            const input = form.querySelector('input');
+            const message = input.value.trim();
+            if (message) {
+                socket.emit('sendMessage', { conversationId, userName, message, userId });
+                input.value = '';
+            }
+        });
+
+        socket.on('receiveMessage', ({ userName, message, conversationId }) => {
+            const messagesDiv = document.getElementById(`messages-${conversationId}`);
+            if (messagesDiv) {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'msg';
+                msgDiv.textContent = `${userName}: ${message}`;
+                messagesDiv.appendChild(msgDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        });
+    });
+</script>
+
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multi-Room Chat with Google Login</title>
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 20px;
+      background: #f2f2f2;
+    }
+    #login-container, #chat-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    #chat-container {
+      display: none;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+    }
+    .chat-box {
+      background: white;
+      width: 350px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-box h3 {
+      margin: 0 0 10px;
+      text-align: center;
+    }
+    .messages {
+      height: 250px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      background: #fafafa;
+    }
+    .msg {
+      margin-bottom: 10px;
+    }
+    .chat-form {
+      display: flex;
+    }
+    .chat-form input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-right: none;
+      border-radius: 5px 0 0 5px;
+    }
+    .chat-form button {
+      padding: 10px 15px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 0 5px 5px 0;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div id="login-container">
+  <h2>Login with Google</h2>
+  <div id="googleSignInBtn"></div>
+</div>
+
+<div id="chat-container"></div>
+
+<script>
+  const socket = io('http://localhost:3000'); // replace with your Socket.io server URL
+
+  const loginContainer = document.getElementById('login-container');
+  const chatContainer = document.getElementById('chat-container');
+  const chatBoxes = {};
+
+  // Initialize Google OAuth Button
+  window.onload = function () {
+  google.accounts.id.initialize({
+    client_id: "1058441969384-pubcqga2i5ttafrlff3i6i6ef3q5fjoj.apps.googleusercontent.com",
+    callback: handleGoogleSignIn,
+  });
+    google.accounts.id.renderButton(
+      document.getElementById("googleSignInBtn"),
+      { theme: "outline", size: "large" }
+    );
+  };
+
+  async function handleGoogleSignIn(response) {
+    try {
+      const res = await fetch("http://localhost:3000/api/auth/googleSign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "69420"
+        },
+        body: JSON.stringify({ token: response.credential })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error("Login failed:", data.message || data.error);
+        return;
+      }
+
+      const { token, userInfoAndToken } = data;
+      const { userId, userName } = userInfoAndToken;
+
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("loggedInUser", JSON.stringify(userInfoAndToken));
+
+      loginContainer.style.display = 'none';
+      chatContainer.style.display = 'flex';
+
+      loadChatRooms(userId, userName);
+
+    } catch (error) {
+      console.error("Google login error:", error);
+      alert("Login failed");
+    }
+  }
+
+  async function loadChatRooms(userId, userName) {
+    const res = await fetch(`http://localhost:3000/api/conversation?userId=${userId}`);
+    const conversationsData = await res.json();
+    const conversations = conversationsData.result;
+
+    for (const conversation of conversations) {
+      const conversationId = conversation._id;
+
+      // Join Socket Room
+      socket.emit('join', { conversationId, userName });
+
+      // Create Chat UI
+      const box = document.createElement('div');
+      box.className = 'chat-box';
+      box.innerHTML = `
+        <h3>Conversation: ${conversationId}</h3>
+        <div class="messages" id="messages-${conversationId}"></div>
+        <form class="chat-form" data-id="${conversationId}">
+          <input type="text" placeholder="Type a message..." required />
+          <button type="submit">Send</button>
+        </form>
+      `;
+      chatContainer.appendChild(box);
+      chatBoxes[conversationId] = box;
+
+      // Load previous messages
+      const messageRes = await fetch(`http://localhost:3000/api/conversation/messages/${conversationId}`);
+      const messageData = await messageRes.json();
+      const messages = messageData.result;
+
+      const messageDiv = document.getElementById(`messages-${conversationId}`);
+      messages.forEach(msg => {
+        const msgEl = document.createElement('div');
+        msgEl.className = 'msg';
+        msgEl.textContent = `${msg.createdBy.firstName === userName ? "You" : msg.createdBy.firstName}: ${msg.content}`;
+        messageDiv.appendChild(msgEl);
+      });
+
+      messageDiv.scrollTop = messageDiv.scrollHeight;
+    }
+
+    // Handle Sending Message
+    chatContainer.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const conversationId = form.dataset.id;
+      const input = form.querySelector('input');
+      const message = input.value.trim();
+      if (message) {
+        socket.emit('sendMessage', { conversationId, userName, message, userId });
+        input.value = '';
+      }
+    });
+
+    // Receive message
+    socket.on('receiveMessage', ({ userName, message, conversationId }) => {
+      const messagesDiv = document.getElementById(`messages-${conversationId}`);
+      if (messagesDiv) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'msg';
+        msgDiv.textContent = `${userName}: ${message}`;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
