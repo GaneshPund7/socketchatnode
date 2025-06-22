@@ -27,7 +27,7 @@ module.exports.insertMessage = async (messageData) => {
 }
 
 module.exports.fetchMessage = async (conversationId) => {
-  const getMessage = await db.message.find({ conversationId }).populate("createdBy", "name");
+  const getMessage = await db.message.find({ conversationId }).populate("createdBy", "name", "avatarUrl");
 
   if (!getMessage.length) {
     throw new BadRequestError("No messages found");
