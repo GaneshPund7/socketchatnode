@@ -26,7 +26,7 @@ module.exports.uploadFile = async (req, res) => {
     let fileUrl = null;
 console.log("req file ",req.file)
     if (req.file) {
-      fileUrl = `http://localhost:3000/uploads/${req.file.filename}`;
+      fileUrl = `https://ganeshchat.netlify.app/uploads/${req.file.filename}`;
       console.log("FileURL ",fileUrl)
       media.push(fileUrl)
     }
