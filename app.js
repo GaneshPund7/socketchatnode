@@ -35,7 +35,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(cors());
 
 app.use(express.json());
-
+app.use('/uploads', express.static(path.join(__dirname, 'utils/fileUpload/media')));
 app.use('/api', indexRouter);
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

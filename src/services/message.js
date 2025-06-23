@@ -6,6 +6,7 @@ const { BadRequestError, DataNotFoundError } = require('../../utils/customError'
 module.exports.insertMessage = async (messageData) => {
     const { conversationId, createdBy, content, type, media = [],
         parentMessage = null,
+        fileUrl = null,
         isThread = false,
         threadId = null } = messageData;
 
@@ -13,7 +14,7 @@ module.exports.insertMessage = async (messageData) => {
         createdBy,
         conversationId, 
         content,
-        type, media, parentMessage, isThread, threadId
+        type, media,fileUrl, parentMessage, isThread, threadId
     })
 
     if (!addMessage) {
